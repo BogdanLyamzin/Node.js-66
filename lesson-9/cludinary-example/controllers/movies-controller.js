@@ -1,13 +1,10 @@
 const fs = require("fs/promises");
-const path = require("path");
 
 const Movie = require("../models/movie");
 
-const { HttpError } = require("../helpers");
+const { HttpError, cloudinary } = require("../helpers");
 
 const { ctrlWrapper } = require("../decorators");
-
-const moviesDir = path.resolve("public", "movies");
 
 const getAllMovies = async (req, res) => {
     const { _id: owner } = req.user;
@@ -32,11 +29,12 @@ const getMovieById = async (req, res) => {
 
 const addMovie = async (req, res) => {
     const { _id: owner } = req.user;
-    const { path: oldPath, filename } = req.file;
-    const newPath = path.join(moviesDir, filename);
-    await fs.rename(oldPath, newPath);
-    const poster = path.join("movies", filename);
-    const result = await Movie.create({...req.body, poster, owner});
+    const { path: oldPath } = req.file;
+    const fileData = await cloudinary.uploader.upload(oldPath, {
+        folder: "posters"
+    })
+    await fs.unlink(oldPath);
+    const result = await Movie.create({...req.body, poster: fileData.url, owner});
     res.status(201).json(result);
 }
 
